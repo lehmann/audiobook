@@ -7,10 +7,14 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-const AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/aac', 'audio/flac', 'audio/x-m4a', 'audio/m4a', 'audio/mp3']
+const ACCEPTED_TYPES = [
+  'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/aac',
+  'audio/flac', 'audio/x-m4a', 'audio/m4a', 'audio/mp3',
+  'video/mp4', 'video/x-m4v',
+]
 
-function isAudioFile(file: File): boolean {
-  return file.type.startsWith('audio/') || AUDIO_TYPES.includes(file.type)
+function isAcceptedFile(file: File): boolean {
+  return file.type.startsWith('audio/') || ACCEPTED_TYPES.includes(file.type)
 }
 
 export default function UploadPage() {
@@ -34,13 +38,13 @@ export default function UploadPage() {
   const handleAudioDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    const files = Array.from(e.dataTransfer.files).filter(isAudioFile)
+    const files = Array.from(e.dataTransfer.files).filter(isAcceptedFile)
     if (files.length) setAudioFiles((prev) => [...prev, ...files])
   }, [])
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
-    const files = Array.from(e.target.files).filter(isAudioFile)
+    const files = Array.from(e.target.files).filter(isAcceptedFile)
     setAudioFiles((prev) => [...prev, ...files])
     e.target.value = ''
   }
@@ -146,11 +150,11 @@ export default function UploadPage() {
             >
               <Upload size={40} className="mx-auto mb-3 text-slate-500" />
               <p className="text-slate-300 font-medium mb-1">Drop audio files here</p>
-              <p className="text-slate-500 text-sm">or click to browse · MP3, M4A, OGG, WAV, FLAC</p>
+              <p className="text-slate-500 text-sm">or click to browse · MP3, M4A, OGG, WAV, FLAC, MP4</p>
               <input
                 ref={audioInputRef}
                 type="file"
-                accept="audio/*"
+                accept="audio/*,video/mp4,video/x-m4v"
                 multiple
                 className="hidden"
                 onChange={handleAudioChange}
