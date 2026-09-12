@@ -5,6 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+User=lehmann
+Group=lehmann
 WorkingDirectory=/home/lehmann/github/audiobook
 ExecStart=/bin/bash /home/lehmann/github/audiobook/deploy/update.sh
 StandardOutput=journal
