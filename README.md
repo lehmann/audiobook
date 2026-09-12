@@ -103,6 +103,8 @@ The script installs Docker Engine + Compose plugin, clones the repo, builds the 
 
 A systemd timer (`audiobook-update.timer`) runs every 10 minutes. It checks for new commits on `main`; if found, it pulls and runs `docker compose up -d --build`. Docker layer caching makes rebuilds fast when only source files changed.
 
+The service runs as `User=lehmann` (not root) to avoid Git's ownership check (`detected dubious ownership`), which rejects operations on directories owned by a different user.
+
 ```bash
 # Check container status
 docker compose -f /home/lehmann/github/audiobook/docker-compose.yml ps
@@ -114,7 +116,7 @@ docker compose -f /home/lehmann/github/audiobook/docker-compose.yml logs -f
 journalctl -u audiobook-update -f
 
 # Trigger a manual update
-sudo bash /home/lehmann/github/audiobook/deploy/update.sh
+sudo -u lehmann bash /home/lehmann/github/audiobook/deploy/update.sh
 ```
 
 ### Cloudflare Tunnel

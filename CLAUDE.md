@@ -27,7 +27,7 @@ npm run build  # verify compilation before reporting a change as done
 | `deploy/nginx-container.conf` | nginx config inside the container (port 80, SPA routing) |
 | `deploy/install.sh` | One-time install: Docker, git, clone, `docker compose up`, systemd timer |
 | `deploy/update.sh` | `git pull` + `docker compose up -d --build` if commits found |
-| `deploy/audiobook-update.service` | Systemd oneshot service that runs `update.sh` |
+| `deploy/audiobook-update.service` | Systemd oneshot service que roda `update.sh` como `User=lehmann` (evita erro de ownership do Git) |
 | `deploy/audiobook-update.timer` | Systemd timer — fires 2 min after boot, then every 10 min |
 | `deploy/cloudflared.yml` | Cloudflare Tunnel config template |
 
@@ -37,12 +37,16 @@ npm run build  # verify compilation before reporting a change as done
 docker compose ps
 docker compose logs -f
 
-# Force manual update
-sudo bash /home/lehmann/github/audiobook/deploy/update.sh
+# Force manual update (rode como lehmann, não root)
+sudo -u lehmann bash /home/lehmann/github/audiobook/deploy/update.sh
 
 # Check update timer and logs
 systemctl status audiobook-update.timer
 journalctl -u audiobook-update -n 50
+
+# Reaplicar o service após mudanças no arquivo
+sudo cp /home/lehmann/github/audiobook/deploy/audiobook-update.service /etc/systemd/system/
+sudo systemctl daemon-reload
 ```
 
 ## Architecture — key invariants
