@@ -1,0 +1,12 @@
+[Unit]
+Description=Audiobook Player — auto-update timer (every 10 minutes)
+
+[Timer]
+# Run 2 minutes after boot, then every 10 minutes
+OnBootSec=2min
+OnUnitActiveSec=10min
+# Re-trigger missed runs after downtime (e.g. server was off)
+Persistent=true
+
+[Install]
+WantedBy=timers.target

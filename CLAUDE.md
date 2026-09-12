@@ -9,6 +9,38 @@ npm run dev    # http://localhost:5173
 npm run build  # verify compilation before reporting a change as done
 ```
 
+## Production deployment
+- **Server:** Ubuntu Server, served by nginx on port 6001
+- **Distribution:** static files built to `dist/` — no Node.js process at runtime
+- **Public access:** Cloudflare Tunnel forwards internet traffic → `localhost:6001`
+- **App dir:** `/opt/audiobook` (cloned from GitHub)
+- **Install:** `sudo bash deploy/install.sh` (one-time)
+- **Auto-update:** systemd timer `audiobook-update.timer` — every 10 minutes, runs `deploy/update.sh`
+
+### Deploy files
+| File | Purpose |
+|---|---|
+| `deploy/install.sh` | One-time install: Node 20, nginx, clone, build, systemd timer |
+| `deploy/update.sh` | Pull + rebuild; skips `npm ci` when `package.json` unchanged |
+| `deploy/nginx.conf` | Reference nginx config (installed automatically by `install.sh`) |
+| `deploy/audiobook-update.service` | Systemd oneshot service that runs `update.sh` |
+| `deploy/audiobook-update.timer` | Systemd timer — fires 2 min after boot, then every 10 min |
+| `deploy/cloudflared.yml` | Cloudflare Tunnel config template |
+
+### Useful server commands
+```bash
+# Check update timer
+systemctl status audiobook-update.timer
+journalctl -u audiobook-update -n 50
+
+# Force manual update
+sudo bash /opt/audiobook/deploy/update.sh
+
+# Check nginx
+nginx -t && systemctl reload nginx
+systemctl status nginx
+```
+
 ## Architecture — key invariants
 
 ### Single audio element

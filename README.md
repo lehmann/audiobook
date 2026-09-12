@@ -74,6 +74,58 @@ nvm install 20   # or nvm install lts
 npm install -D vite-plugin-pwa workbox-window
 ```
 
+## Self-hosting on Ubuntu Server
+
+The app is a pure static SPA — nginx serves the built `dist/` folder; no Node.js process runs at runtime.
+
+### Architecture
+
+```
+Internet → Cloudflare Tunnel → nginx :6001 → dist/
+                                        ↑
+                              auto-update every 10 min
+                              (git pull + npm run build)
+```
+
+### Installation (one-time, run as root)
+
+```bash
+# On the Ubuntu server
+git clone https://github.com/lehmann/audiobook.git /opt/audiobook
+sudo bash /opt/audiobook/deploy/install.sh
+```
+
+The script installs Node.js 20, nginx, clones/builds the app, configures nginx on port 6001, and sets up a systemd timer for auto-updates.
+
+### Auto-update
+
+A systemd timer (`audiobook-update.timer`) runs every 10 minutes. It checks for new commits on `main`. If found, it pulls, runs `npm ci` (only if `package.json` changed), and rebuilds. nginx picks up new files automatically — no reload needed.
+
+```bash
+# Check timer status
+systemctl status audiobook-update.timer
+
+# Watch update logs live
+journalctl -u audiobook-update -f
+
+# Trigger a manual update
+sudo bash /opt/audiobook/deploy/update.sh
+```
+
+### Cloudflare Tunnel
+
+The tunnel forwards HTTPS traffic from your domain to `localhost:6001`. See `deploy/cloudflared.yml` for the full setup steps.
+
+```bash
+# Quick summary (after cloudflared is installed and authenticated)
+cloudflared tunnel create audiobook
+cloudflared tunnel route dns audiobook <your-domain>
+sudo cp /opt/audiobook/deploy/cloudflared.yml /etc/cloudflared/config.yml
+# Edit /etc/cloudflared/config.yml — fill in tunnel ID, credentials path, domain
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+```
+
 ## Tech stack
 
 | | |

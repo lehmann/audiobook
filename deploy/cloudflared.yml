@@ -1,0 +1,39 @@
+# deploy/cloudflared.yml
+# Cloudflare Tunnel configuration.
+#
+# Prerequisites:
+#   1. Install cloudflared:
+#        curl -L https://pkg.cloudflare.com/cloudflare-main.gpg | \
+#          sudo tee /usr/share/keyrings/cloudflare-main.gpg > /dev/null
+#        echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] \
+#          https://pkg.cloudflare.com/cloudflared any main" | \
+#          sudo tee /etc/apt/sources.list.d/cloudflared.list
+#        sudo apt update && sudo apt install cloudflared
+#
+#   2. Authenticate:
+#        cloudflared tunnel login
+#
+#   3. Create tunnel (one-time):
+#        cloudflared tunnel create audiobook
+#        # Note the tunnel ID that is printed — replace <TUNNEL_ID> below.
+#
+#   4. Copy this file:
+#        sudo cp /opt/audiobook/deploy/cloudflared.yml \
+#                /etc/cloudflared/config.yml
+#      Then edit /etc/cloudflared/config.yml and fill in tunnel and credentials-file.
+#
+#   5. Add DNS record:
+#        cloudflared tunnel route dns audiobook <your-domain>
+#        # e.g.: cloudflared tunnel route dns audiobook audiobook.example.com
+#
+#   6. Install and start as a system service:
+#        sudo cloudflared service install
+#        sudo systemctl enable --now cloudflared
+
+tunnel: <TUNNEL_ID>
+credentials-file: /root/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: <your-domain>   # e.g. audiobook.example.com
+    service: http://localhost:6001
+  - service: http_status:404
