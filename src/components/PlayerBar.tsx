@@ -169,6 +169,36 @@ export default function PlayerBar() {
           />
         </div>
       </div>
+
+      {/* Mobile-only second row: time, speed, volume */}
+      <div className="sm:hidden flex items-center gap-3 px-4 pb-2">
+        <span className="text-slate-400 text-xs whitespace-nowrap">
+          {formatTime(position)} / {formatTime(duration)}
+        </span>
+        <button
+          onClick={cycleSpeed}
+          className="text-slate-400 hover:text-white text-xs font-mono w-10 text-center flex-shrink-0"
+        >
+          {speed}x
+        </button>
+        <div className="flex items-center gap-2 flex-1">
+          <button onClick={toggleMute} className="text-slate-400 hover:text-white transition-colors flex-shrink-0">
+            {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="flex-1"
+            style={{
+              background: `linear-gradient(to right, #6366f1 ${volume * 100}%, #475569 ${volume * 100}%)`,
+            }}
+          />
+        </div>
+      </div>
     </div>
   )
 }
