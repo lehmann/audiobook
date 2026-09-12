@@ -5,7 +5,7 @@
 #
 # What this does:
 #   1. Installs Node.js 20, nginx, git
-#   2. Clones the repo to /opt/audiobook
+#   2. Clones the repo to /home/lehmann/github/audiobook
 #   3. Builds the app
 #   4. Configures nginx to serve on port 6001
 #   5. Installs a systemd timer for auto-update
@@ -14,7 +14,7 @@ set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/lehmann/audiobook.git"
-APP_DIR="/opt/audiobook"
+APP_DIR="/home/lehmann/github/audiobook"
 HTTP_PORT="6001"
 BRANCH="main"
 # ─────────────────────────────────────────────────────────────────────────────

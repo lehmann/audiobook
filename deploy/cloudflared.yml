@@ -18,7 +18,7 @@
 #        # Note the tunnel ID that is printed — replace <TUNNEL_ID> below.
 #
 #   4. Copy this file:
-#        sudo cp /opt/audiobook/deploy/cloudflared.yml \
+#        sudo cp /home/lehmann/github/audiobook/deploy/cloudflared.yml \
 #                /etc/cloudflared/config.yml
 #      Then edit /etc/cloudflared/config.yml and fill in tunnel and credentials-file.
 #

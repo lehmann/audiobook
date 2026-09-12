@@ -2,11 +2,11 @@
 # deploy/update.sh
 # Pull latest changes from GitHub and rebuild if anything changed.
 # Called by the audiobook-update.service (systemd timer).
-# Can also be run manually: sudo bash /opt/audiobook/deploy/update.sh
+# Can also be run manually: sudo bash /home/lehmann/github/audiobook/deploy/update.sh
 
 set -euo pipefail
 
-APP_DIR="/opt/audiobook"
+APP_DIR="/home/lehmann/github/audiobook"
 BRANCH="main"
 LOG_TAG="audiobook-update"
 

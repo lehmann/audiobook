@@ -91,8 +91,8 @@ Internet → Cloudflare Tunnel → nginx :6001 → dist/
 
 ```bash
 # On the Ubuntu server
-git clone https://github.com/lehmann/audiobook.git /opt/audiobook
-sudo bash /opt/audiobook/deploy/install.sh
+git clone https://github.com/lehmann/audiobook.git /home/lehmann/github/audiobook
+sudo bash /home/lehmann/github/audiobook/deploy/install.sh
 ```
 
 The script installs Node.js 20, nginx, clones/builds the app, configures nginx on port 6001, and sets up a systemd timer for auto-updates.
@@ -109,7 +109,7 @@ systemctl status audiobook-update.timer
 journalctl -u audiobook-update -f
 
 # Trigger a manual update
-sudo bash /opt/audiobook/deploy/update.sh
+sudo bash /home/lehmann/github/audiobook/deploy/update.sh
 ```
 
 ### Cloudflare Tunnel
@@ -120,7 +120,7 @@ The tunnel forwards HTTPS traffic from your domain to `localhost:6001`. See `dep
 # Quick summary (after cloudflared is installed and authenticated)
 cloudflared tunnel create audiobook
 cloudflared tunnel route dns audiobook <your-domain>
-sudo cp /opt/audiobook/deploy/cloudflared.yml /etc/cloudflared/config.yml
+sudo cp /home/lehmann/github/audiobook/deploy/cloudflared.yml /etc/cloudflared/config.yml
 # Edit /etc/cloudflared/config.yml — fill in tunnel ID, credentials path, domain
 sudo cloudflared service install
 sudo systemctl enable --now cloudflared

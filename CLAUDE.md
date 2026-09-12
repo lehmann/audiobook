@@ -13,7 +13,7 @@ npm run build  # verify compilation before reporting a change as done
 - **Server:** Ubuntu Server, served by nginx on port 6001
 - **Distribution:** static files built to `dist/` — no Node.js process at runtime
 - **Public access:** Cloudflare Tunnel forwards internet traffic → `localhost:6001`
-- **App dir:** `/opt/audiobook` (cloned from GitHub)
+- **App dir:** `/home/lehmann/github/audiobook` (cloned from GitHub)
 - **Install:** `sudo bash deploy/install.sh` (one-time)
 - **Auto-update:** systemd timer `audiobook-update.timer` — every 10 minutes, runs `deploy/update.sh`
 
@@ -34,7 +34,7 @@ systemctl status audiobook-update.timer
 journalctl -u audiobook-update -n 50
 
 # Force manual update
-sudo bash /opt/audiobook/deploy/update.sh
+sudo bash /home/lehmann/github/audiobook/deploy/update.sh
 
 # Check nginx
 nginx -t && systemctl reload nginx
