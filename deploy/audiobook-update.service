@@ -1,6 +1,6 @@
 [Unit]
 Description=Audiobook Player — auto-update from GitHub
-After=network-online.target
+After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
@@ -11,5 +11,5 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=audiobook-update
 
-# Allow up to 5 minutes for a full npm ci + build
-TimeoutStartSec=300
+# Allow up to 10 minutes: git pull + docker build + container restart
+TimeoutStartSec=600

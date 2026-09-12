@@ -4,10 +4,10 @@
 # Run as root: sudo bash deploy/install.sh
 #
 # What this does:
-#   1. Installs Node.js 20, nginx, git
-#   2. Clones the repo to /home/lehmann/github/audiobook
-#   3. Builds the app
-#   4. Configures nginx to serve on port 6001
+#   1. Installs Docker Engine + Compose plugin
+#   2. Installs git
+#   3. Clones the repo to /home/lehmann/github/audiobook
+#   4. Builds and starts the Docker container (port 6001)
 #   5. Installs a systemd timer for auto-update
 
 set -euo pipefail
@@ -15,82 +15,59 @@ set -euo pipefail
 # ── Configuration ────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/lehmann/audiobook.git"
 APP_DIR="/home/lehmann/github/audiobook"
+APP_USER="lehmann"
 HTTP_PORT="6001"
 BRANCH="main"
 # ─────────────────────────────────────────────────────────────────────────────
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
-info()    { echo -e "${GREEN}[install]${NC} $*"; }
-warn()    { echo -e "${YELLOW}[install]${NC} $*"; }
-error()   { echo -e "${RED}[install]${NC} $*" >&2; exit 1; }
+info()  { echo -e "${GREEN}[install]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[install]${NC} $*"; }
+error() { echo -e "${RED}[install]${NC} $*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || error "Must run as root (sudo bash deploy/install.sh)"
 
-# ── 1. Node.js 20 ────────────────────────────────────────────────────────────
-if command -v node &>/dev/null && node -e "process.exit(parseInt(process.version.slice(1)) >= 20 ? 0 : 1)" 2>/dev/null; then
-  info "Node.js $(node -v) already installed"
+# ── 1. Docker Engine ──────────────────────────────────────────────────────────
+if command -v docker &>/dev/null; then
+  info "Docker already installed: $(docker --version)"
 else
-  info "Installing Node.js 20..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y nodejs
+  info "Installing Docker Engine..."
+  curl -fsSL https://get.docker.com | sh
 fi
-info "node $(node -v) | npm $(npm -v)"
 
-# ── 2. System packages ────────────────────────────────────────────────────────
-info "Installing nginx and git..."
-apt-get install -y nginx git
+# Compose v2 plugin (included in modern Docker installs; install explicitly if missing)
+if ! docker compose version &>/dev/null; then
+  info "Installing docker-compose-plugin..."
+  apt-get install -y docker-compose-plugin
+fi
+info "$(docker compose version)"
 
-# ── 3. Clone or update repo ───────────────────────────────────────────────────
+# ── 2. Git ────────────────────────────────────────────────────────────────────
+apt-get install -y git
+
+# ── 3. Add app user to docker group ──────────────────────────────────────────
+if id "$APP_USER" &>/dev/null; then
+  usermod -aG docker "$APP_USER"
+  info "Added $APP_USER to docker group (re-login required for shell access)"
+fi
+
+# ── 4. Clone or update repo ───────────────────────────────────────────────────
 if [ -d "$APP_DIR/.git" ]; then
   warn "Repo already exists at $APP_DIR — pulling latest"
   git -C "$APP_DIR" pull origin "$BRANCH"
 else
   info "Cloning repo to $APP_DIR..."
+  # Create parent dir if needed
+  mkdir -p "$(dirname "$APP_DIR")"
   git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
 fi
+chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 
-# ── 4. Build ──────────────────────────────────────────────────────────────────
-info "Installing dependencies and building..."
+# ── 5. Build and start container ──────────────────────────────────────────────
+info "Building Docker image and starting container..."
 cd "$APP_DIR"
-npm ci
-npm run build
-info "Build complete → $APP_DIR/dist"
-
-# ── 5. Nginx site config ──────────────────────────────────────────────────────
-info "Configuring nginx on port $HTTP_PORT..."
-cat > /etc/nginx/sites-available/audiobook << NGINX
-server {
-    listen $HTTP_PORT;
-    server_name _;
-
-    root $APP_DIR/dist;
-    index index.html;
-
-    # SPA: all routes fall back to index.html
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-
-    # Immutable cache for hashed assets (Vite output in /assets/)
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        add_header X-Content-Type-Options nosniff;
-    }
-
-    gzip on;
-    gzip_types text/plain text/css application/javascript application/json
-               image/svg+xml image/x-icon application/wasm;
-    gzip_min_length 1024;
-}
-NGINX
-
-ln -sf /etc/nginx/sites-available/audiobook /etc/nginx/sites-enabled/audiobook
-
-nginx -t
-systemctl enable nginx
-systemctl reload nginx
-info "nginx reloaded"
+docker compose up -d --build
+info "Container running → http://localhost:$HTTP_PORT"
 
 # ── 6. Systemd timer for auto-update ─────────────────────────────────────────
 info "Installing systemd auto-update timer..."
@@ -98,7 +75,7 @@ cp "$APP_DIR/deploy/audiobook-update.service" /etc/systemd/system/
 cp "$APP_DIR/deploy/audiobook-update.timer"   /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now audiobook-update.timer
-info "Timer enabled: $(systemctl status audiobook-update.timer --no-pager -l | grep Active)"
+info "Timer enabled"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
@@ -108,8 +85,9 @@ echo -e "${GREEN}═════════════════════
 echo ""
 echo -e "  App URL (internal): ${YELLOW}http://localhost:$HTTP_PORT${NC}"
 echo -e "  App dir:            $APP_DIR"
-echo -e "  Nginx config:       /etc/nginx/sites-available/audiobook"
-echo -e "  Auto-update:        every 10 minutes via systemd timer"
+echo -e "  Container:          docker compose ps"
+echo -e "  Logs:               docker compose logs -f"
+echo -e "  Auto-update:        every 10 min (systemd timer)"
 echo ""
 echo -e "  ${YELLOW}Next: configure Cloudflare Tunnel${NC}"
 echo -e "  1. Install cloudflared:  https://pkg.cloudflare.com/index.html"

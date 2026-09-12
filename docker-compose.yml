@@ -1,0 +1,6 @@
+services:
+  audiobook:
+    build: .
+    ports:
+      - "6001:80"
+    restart: unless-stopped

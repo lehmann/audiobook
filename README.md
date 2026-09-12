@@ -76,16 +76,18 @@ npm install -D vite-plugin-pwa workbox-window
 
 ## Self-hosting on Ubuntu Server
 
-The app is a pure static SPA — nginx serves the built `dist/` folder; no Node.js process runs at runtime.
+Runs as an isolated Docker container — no Node.js or nginx installed on the host. Safe to deploy alongside other services with different dependency versions.
 
 ### Architecture
 
 ```
-Internet → Cloudflare Tunnel → nginx :6001 → dist/
-                                        ↑
-                              auto-update every 10 min
-                              (git pull + npm run build)
+Internet → Cloudflare Tunnel → host :6001 → Docker container → nginx :80 → dist/
+                                                   ↑
+                                         auto-update every 10 min
+                                         (git pull + docker compose up --build)
 ```
+
+The Docker image uses a multi-stage build: `node:20-alpine` compiles the Vite app, then `nginx:alpine` serves the static files (~25 MB final image).
 
 ### Installation (one-time, run as root)
 
@@ -95,17 +97,20 @@ git clone https://github.com/lehmann/audiobook.git /home/lehmann/github/audioboo
 sudo bash /home/lehmann/github/audiobook/deploy/install.sh
 ```
 
-The script installs Node.js 20, nginx, clones/builds the app, configures nginx on port 6001, and sets up a systemd timer for auto-updates.
+The script installs Docker Engine + Compose plugin, clones the repo, builds the image, starts the container on port 6001, and sets up a systemd timer for auto-updates.
 
 ### Auto-update
 
-A systemd timer (`audiobook-update.timer`) runs every 10 minutes. It checks for new commits on `main`. If found, it pulls, runs `npm ci` (only if `package.json` changed), and rebuilds. nginx picks up new files automatically — no reload needed.
+A systemd timer (`audiobook-update.timer`) runs every 10 minutes. It checks for new commits on `main`; if found, it pulls and runs `docker compose up -d --build`. Docker layer caching makes rebuilds fast when only source files changed.
 
 ```bash
-# Check timer status
-systemctl status audiobook-update.timer
+# Check container status
+docker compose -f /home/lehmann/github/audiobook/docker-compose.yml ps
 
-# Watch update logs live
+# Watch container logs
+docker compose -f /home/lehmann/github/audiobook/docker-compose.yml logs -f
+
+# Watch update logs
 journalctl -u audiobook-update -f
 
 # Trigger a manual update

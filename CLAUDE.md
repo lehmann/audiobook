@@ -10,35 +10,39 @@ npm run build  # verify compilation before reporting a change as done
 ```
 
 ## Production deployment
-- **Server:** Ubuntu Server, served by nginx on port 6001
-- **Distribution:** static files built to `dist/` — no Node.js process at runtime
-- **Public access:** Cloudflare Tunnel forwards internet traffic → `localhost:6001`
-- **App dir:** `/home/lehmann/github/audiobook` (cloned from GitHub)
+- **Runtime:** Docker container (isolated — no Node or nginx on the host)
+- **Image:** multi-stage — `node:20-alpine` builds, `nginx:alpine` serves
+- **Port:** host `6001` → container `80`
+- **Public access:** Cloudflare Tunnel → `localhost:6001`
+- **App dir:** `/home/lehmann/github/audiobook`
 - **Install:** `sudo bash deploy/install.sh` (one-time)
-- **Auto-update:** systemd timer `audiobook-update.timer` — every 10 minutes, runs `deploy/update.sh`
+- **Auto-update:** systemd timer `audiobook-update.timer` — every 10 min, runs `docker compose up -d --build`
 
 ### Deploy files
 | File | Purpose |
 |---|---|
-| `deploy/install.sh` | One-time install: Node 20, nginx, clone, build, systemd timer |
-| `deploy/update.sh` | Pull + rebuild; skips `npm ci` when `package.json` unchanged |
-| `deploy/nginx.conf` | Reference nginx config (installed automatically by `install.sh`) |
+| `Dockerfile` | Multi-stage build: node:20-alpine → nginx:alpine |
+| `docker-compose.yml` | Service definition; maps host 6001 → container 80 |
+| `.dockerignore` | Excludes node_modules, dist, .git from build context |
+| `deploy/nginx-container.conf` | nginx config inside the container (port 80, SPA routing) |
+| `deploy/install.sh` | One-time install: Docker, git, clone, `docker compose up`, systemd timer |
+| `deploy/update.sh` | `git pull` + `docker compose up -d --build` if commits found |
 | `deploy/audiobook-update.service` | Systemd oneshot service that runs `update.sh` |
 | `deploy/audiobook-update.timer` | Systemd timer — fires 2 min after boot, then every 10 min |
 | `deploy/cloudflared.yml` | Cloudflare Tunnel config template |
 
 ### Useful server commands
 ```bash
-# Check update timer
-systemctl status audiobook-update.timer
-journalctl -u audiobook-update -n 50
+# Container status and logs
+docker compose ps
+docker compose logs -f
 
 # Force manual update
 sudo bash /home/lehmann/github/audiobook/deploy/update.sh
 
-# Check nginx
-nginx -t && systemctl reload nginx
-systemctl status nginx
+# Check update timer and logs
+systemctl status audiobook-update.timer
+journalctl -u audiobook-update -n 50
 ```
 
 ## Architecture — key invariants
